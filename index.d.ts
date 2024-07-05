@@ -1,6 +1,15 @@
 interface HapticPlugin {
     sendHapticFeedback(
-        /** Default is 'CONFIRM' */
+        /** Default is 'CONFIRM'
+         * The following are only supported on Android API Level 34+:
+         *   - 'DRAG_START'
+         *   - 'GESTURE_THRESHOLD_ACTIVATE'
+         *   - 'GESTURE_THRESHOLD_DEACTIVATE'
+         *   - 'SEGMENT_FREQUENT_TICK'
+         *   - 'SEGMENT_TICK'
+         *   - 'TOGGLE_OFF'
+         *   - ‘TOGGLE_ON’
+        */
         androidType?:
         'CLOCK_TICK'
         | 'CONFIRM'

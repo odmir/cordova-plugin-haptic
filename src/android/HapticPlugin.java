@@ -7,6 +7,10 @@ import org.apache.cordova.CordovaWebView;
 import org.json.JSONArray;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
+import android.os.Build;
+import androidx.annotation.RequiresApi;
+import java.lang.reflect.Field;
+
 
 public class HapticPlugin extends CordovaPlugin {
     private View cordovaWebView;
@@ -21,8 +25,9 @@ public class HapticPlugin extends CordovaPlugin {
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
         if ("sendHapticFeedback".equals(action)) {
             try {
-                int hapticFeedbackType = HapticFeedbackConstants.NO_HAPTICS;
-                switch (args.getString(0)) {
+                String hType = args.getString(0);
+                Integer hapticFeedbackType = null; // HapticFeedbackConstants.NO_HAPTICS not available in API Lvl 33
+                switch (hType) {
                     case "CLOCK_TICK":
                         hapticFeedbackType = HapticFeedbackConstants.CLOCK_TICK;
                         break;
@@ -32,20 +37,11 @@ public class HapticPlugin extends CordovaPlugin {
                     case "CONTEXT_CLICK":
                         hapticFeedbackType = HapticFeedbackConstants.CONTEXT_CLICK;
                         break;
-                    case "DRAG_START":
-                        hapticFeedbackType = HapticFeedbackConstants.DRAG_START;
-                        break;
                     case "GESTURE_END":
                         hapticFeedbackType = HapticFeedbackConstants.GESTURE_END;
                         break;
                     case "GESTURE_START":
                         hapticFeedbackType = HapticFeedbackConstants.GESTURE_START;
-                        break;
-                    case "GESTURE_THRESHOLD_ACTIVATE":
-                        hapticFeedbackType = HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE;
-                        break;
-                    case "GESTURE_THRESHOLD_DEACTIVATE":
-                        hapticFeedbackType = HapticFeedbackConstants.GESTURE_THRESHOLD_DEACTIVATE;
                         break;
                     case "KEYBOARD_PRESS":
                         hapticFeedbackType = HapticFeedbackConstants.KEYBOARD_PRESS;
@@ -62,20 +58,8 @@ public class HapticPlugin extends CordovaPlugin {
                     case "REJECT":
                         hapticFeedbackType = HapticFeedbackConstants.REJECT;
                         break;
-                    case "SEGMENT_FREQUENT_TICK":
-                        hapticFeedbackType = HapticFeedbackConstants.SEGMENT_FREQUENT_TICK;
-                        break;
-                    case "SEGMENT_TICK":
-                        hapticFeedbackType = HapticFeedbackConstants.SEGMENT_TICK;
-                        break;
                     case "TEXT_HANDLE_MOVE":
                         hapticFeedbackType = HapticFeedbackConstants.TEXT_HANDLE_MOVE;
-                        break;
-                    case "TOGGLE_OFF":
-                        hapticFeedbackType = HapticFeedbackConstants.TOGGLE_OFF;
-                        break;
-                    case "TOGGLE_ON":
-                        hapticFeedbackType = HapticFeedbackConstants.TOGGLE_ON;
                         break;
                     case "VIRTUAL_KEY":
                         hapticFeedbackType = HapticFeedbackConstants.VIRTUAL_KEY;
@@ -83,6 +67,17 @@ public class HapticPlugin extends CordovaPlugin {
                     case "VIRTUAL_KEY_RELEASE":
                         hapticFeedbackType = HapticFeedbackConstants.VIRTUAL_KEY_RELEASE;
                 }
+
+                if (hapticFeedbackType == null && Build.VERSION.SDK_INT >= 34) { // only runs for API Level 34+
+                    hapticFeedbackType = checkFeedbackType_API34(hType);
+                }
+
+                // Bail if feedback type is unknown
+                if (hapticFeedbackType == null) {
+                    callbackContext.error("Unknown HapticFeedbackType: " + hType);
+                    return true;
+                }
+
                 this.cordovaWebView.performHapticFeedback(hapticFeedbackType);
                 callbackContext.success();
             }
@@ -92,5 +87,13 @@ public class HapticPlugin extends CordovaPlugin {
             return true;
         }
         return false;
+    }
+
+    @RequiresApi(api = 34)
+    private Integer checkFeedbackType_API34(String hType) throws NoSuchFieldException, IllegalAccessException {
+        // Constants: DRAG_START, GESTURE_THRESHOLD_ACTIVATE, GESTURE_THRESHOLD_DEACTIVATE,
+        //   SEGMENT_FREQUENT_TICK, SEGMENT_TICK, TOGGLE_OFF, TOGGLE_ON
+        Field field = HapticFeedbackConstants.class.getField(hType);
+        return (Integer) field.get(null);
     }
 }
